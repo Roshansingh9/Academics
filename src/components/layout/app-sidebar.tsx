@@ -4,10 +4,11 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import {
   LayoutDashboard, Users, UserCheck, BookOpen, MessageSquare,
   Bell, AlertTriangle, ClipboardList, BarChart2, UserCircle,
-  GraduationCap, ClipboardCheck, ChevronRight,
+  ClipboardCheck, ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePolling } from "@/hooks/usePolling";
@@ -75,13 +76,16 @@ export function AppSidebar() {
     <aside className="w-[220px] min-h-screen bg-zinc-950 flex flex-col shrink-0 border-r border-zinc-800/60">
 
       {/* Brand */}
-      <div className="h-14 flex items-center gap-2.5 px-4 border-b border-zinc-800/60">
-        <div className="flex items-center justify-center h-7 w-7 rounded-lg bg-indigo-600 shrink-0">
-          <GraduationCap className="h-4 w-4 text-white" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-[13px] font-semibold text-white leading-none tracking-tight truncate">Leafclutch</p>
-          <p className="text-[11px] text-zinc-500 mt-0.5 leading-none">Academics</p>
+      <div className="h-14 flex items-center px-3 border-b border-zinc-800/60">
+        <div className="bg-white rounded-lg px-2.5 py-1.5 flex items-center">
+          <Image
+            src="/logo.png"
+            alt="Leafclutch Academics"
+            width={160}
+            height={36}
+            className="h-7 w-auto object-contain"
+            priority
+          />
         </div>
       </div>
 

@@ -21,7 +21,18 @@ export default withAuth(
       return NextResponse.redirect(new URL(getDashboardPath(token.role as string), req.url));
     }
 
-    // Force password change: redirect to profile if mustChangePassword
+    // Block deactivated non-admin users from accessing dashboard routes.
+    // isActive is refreshed via the jwt callback on every getServerSession() call,
+    // so the dashboard layout provides an immediate check as well.
+    if (
+      token.isActive === false &&
+      token.role !== "ADMIN" &&
+      !pathname.startsWith("/api")
+    ) {
+      return NextResponse.redirect(new URL("/blocked", req.url));
+    }
+
+    // Force password change for invited users
     if (
       token.mustChangePassword &&
       !pathname.includes("/change-password") &&

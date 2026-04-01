@@ -69,7 +69,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   const student = await prisma.student.findUnique({ where: { id: params.id } });
   if (!student) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  await prisma.user.delete({ where: { id: student.userId } });
+  // Delete related records in order to avoid FK constraint violations
+  await prisma.$transaction([
+    prisma.submission.deleteMany({ where: { studentId: student.id } }),
+    prisma.warning.deleteMany({ where: { studentId: student.id } }),
+    prisma.message.deleteMany({ where: { studentId: student.id } }),
+    prisma.user.delete({ where: { id: student.userId } }),
+  ]);
 
   return NextResponse.json({ success: true });
 }

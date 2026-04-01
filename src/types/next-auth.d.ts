@@ -10,6 +10,7 @@ declare module "next-auth" {
       email: string;
       role: Role;
       mustChangePassword: boolean;
+      isActive: boolean;
       profileId?: string;
     };
   }
@@ -20,6 +21,7 @@ declare module "next-auth" {
     email: string;
     role: Role;
     mustChangePassword: boolean;
+    isActive: boolean;
     profileId?: string;
   }
 }
@@ -31,6 +33,7 @@ declare module "next-auth/jwt" {
     email: string;
     role: Role;
     mustChangePassword: boolean;
+    isActive: boolean;
     profileId?: string;
   }
 }

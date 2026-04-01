@@ -6,10 +6,11 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { GraduationCap, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "User ID or email is required"),
@@ -35,7 +36,11 @@ export default function LoginPage() {
     });
 
     if (result?.error) {
-      setError("Invalid credentials. Please check your User ID or email and password.");
+      if (result.error === "AccountDeactivated") {
+        setError("deactivated");
+      } else {
+        setError("invalid");
+      }
       return;
     }
 
@@ -51,19 +56,20 @@ export default function LoginPage() {
     <div className="min-h-screen grid lg:grid-cols-2 bg-zinc-50">
       {/* ── Left panel ───────────────────────────────── */}
       <div className="hidden lg:flex flex-col justify-between bg-zinc-950 p-10 relative overflow-hidden">
-        {/* Subtle grid pattern */}
-        <div className="absolute inset-0 opacity-[0.04] bg-grid-pattern" />
-        {/* Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-indigo-600/20 rounded-full blur-[120px]" />
+        <div className="absolute inset-0 opacity-[0.03] bg-grid-pattern" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#3ae39e]/8 rounded-full blur-[120px]" />
 
         {/* Logo */}
-        <div className="relative flex items-center gap-3">
-          <div className="flex items-center justify-center h-9 w-9 rounded-xl bg-indigo-600 shadow-lg shadow-indigo-900/40">
-            <GraduationCap className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <p className="text-white font-semibold text-[15px] leading-none">Leafclutch</p>
-            <p className="text-zinc-500 text-[12px] mt-0.5 leading-none">Academics</p>
+        <div className="relative">
+          <div className="bg-white rounded-xl px-4 py-2.5 inline-flex">
+            <Image
+              src="/logo.png"
+              alt="Leafclutch Academics"
+              width={200}
+              height={48}
+              className="h-10 w-auto object-contain"
+              priority
+            />
           </div>
         </div>
 
@@ -77,7 +83,6 @@ export default function LoginPage() {
               Assignments, mentor communication, progress tracking — all streamlined for students and mentors.
             </p>
           </div>
-          {/* Feature pills */}
           <div className="flex flex-wrap gap-2">
             {["Assignment tracking", "Direct messaging", "Progress analytics", "Email notifications"].map((f) => (
               <span key={f} className="px-3 py-1 rounded-full text-[12px] font-medium bg-zinc-800 text-zinc-400 border border-zinc-700/60">
@@ -87,18 +92,23 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="relative text-[12px] text-zinc-600">© {new Date().getFullYear()} Leafclutch. All rights reserved.</p>
+        <p className="relative text-[12px] text-zinc-600">© {new Date().getFullYear()} Leafclutch Technologies Pvt. Ltd.</p>
       </div>
 
       {/* ── Right panel (form) ────────────────────────── */}
       <div className="flex items-center justify-center p-6 lg:p-10">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2.5 mb-8">
-            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-indigo-600">
-              <GraduationCap className="h-4 w-4 text-white" />
+          <div className="lg:hidden flex justify-start mb-8">
+            <div className="bg-white rounded-xl px-3 py-2 border border-zinc-200 shadow-sm">
+              <Image
+                src="/logo.png"
+                alt="Leafclutch Academics"
+                width={160}
+                height={38}
+                className="h-8 w-auto object-contain"
+              />
             </div>
-            <p className="font-semibold text-zinc-900">Leafclutch Academics</p>
           </div>
 
           {/* Heading */}
@@ -109,10 +119,34 @@ export default function LoginPage() {
 
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-            {error && (
+            {error === "deactivated" && (
+              <div className="text-sm bg-orange-50 border border-orange-200 rounded-xl p-3.5 space-y-1">
+                <div className="flex items-start gap-2.5 text-orange-700">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                  <p className="font-medium">Account deactivated</p>
+                </div>
+                <p className="text-orange-600 pl-6.5 text-[13px]">
+                  Your account has been deactivated. Please contact{" "}
+                  <a href="mailto:admin.academics@leafclutch.com.np" className="underline underline-offset-2">
+                    the administrator
+                  </a>
+                  .
+                </p>
+              </div>
+            )}
+            {error === "invalid" && (
               <div className="flex items-start gap-2.5 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3.5">
                 <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
-                <p>{error}</p>
+                <div>
+                  <p>Invalid credentials. Please check your User ID or email and password.</p>
+                  <p className="mt-1 text-red-600/80 text-[12px]">
+                    If you encounter any issues, contact{" "}
+                    <a href="mailto:admin.academics@leafclutch.com.np" className="underline underline-offset-2">
+                      the administrator
+                    </a>
+                    .
+                  </p>
+                </div>
               </div>
             )}
 
@@ -127,9 +161,7 @@ export default function LoginPage() {
                 className="h-10 rounded-xl border-zinc-200 bg-white text-sm placeholder:text-zinc-400 focus-visible:ring-2 focus-visible:ring-indigo-500/25 focus-visible:border-indigo-500 transition-all duration-150"
                 {...register("identifier")}
               />
-              {errors.identifier && (
-                <p className="text-xs text-red-500">{errors.identifier.message}</p>
-              )}
+              {errors.identifier && <p className="text-xs text-red-500">{errors.identifier.message}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -152,9 +184,7 @@ export default function LoginPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              {errors.password && (
-                <p className="text-xs text-red-500">{errors.password.message}</p>
-              )}
+              {errors.password && <p className="text-xs text-red-500">{errors.password.message}</p>}
             </div>
 
             <Button
@@ -163,7 +193,7 @@ export default function LoginPage() {
               disabled={isSubmitting}
             >
               {isSubmitting ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Signing in...</>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Signing in…</>
               ) : (
                 "Sign In"
               )}
@@ -171,7 +201,11 @@ export default function LoginPage() {
           </form>
 
           <p className="mt-8 text-center text-[12px] text-zinc-400">
-            Contact your administrator if you need access.
+            If you encounter any issues, contact{" "}
+            <a href="mailto:admin.academics@leafclutch.com.np" className="text-indigo-500 hover:underline">
+              the administrator
+            </a>
+            .
           </p>
         </div>
       </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { StudentDeleteButton } from "@/components/admin/student-delete-button";
+import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import { formatDate } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -27,8 +28,8 @@ export default async function AdminStudentsPage({
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: { select: { userId: true, createdAt: true } },
-        mentor: { select: { name: true } },
+        user: { select: { id: true, userId: true, createdAt: true, mustChangePassword: true } },
+        mentor: { select: { name: true, isActive: true } },
       },
       orderBy: { createdAt: "desc" },
     }),
@@ -44,6 +45,9 @@ export default async function AdminStudentsPage({
   return (
     <div className="space-y-6">
       <PageHeader title="Students" description={`${total} student${total !== 1 ? "s" : ""} enrolled`}>
+        <Button asChild size="sm" variant="outline" className="rounded-lg h-8 text-[13px]">
+          <Link href="/admin/students/reassign">Reassign Students</Link>
+        </Button>
         <Button asChild size="sm" className="rounded-lg h-8 text-[13px] bg-indigo-600 hover:bg-indigo-700">
           <Link href="/admin/students/new">Add Student</Link>
         </Button>
@@ -51,7 +55,9 @@ export default async function AdminStudentsPage({
 
       {students.length === 0 ? (
         <EmptyState icon={Users} title="No students yet" description="Create your first student to get started.">
-          <Button asChild size="sm" className="rounded-lg bg-indigo-600 hover:bg-indigo-700"><Link href="/admin/students/new">Add Student</Link></Button>
+          <Button asChild size="sm" className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+            <Link href="/admin/students/new">Add Student</Link>
+          </Button>
         </EmptyState>
       ) : (
         <div className="bg-white border border-zinc-200 rounded-xl shadow-card overflow-hidden">
@@ -86,13 +92,27 @@ export default async function AdminStudentsPage({
                     </td>
                     <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden md:table-cell">{student.email}</td>
                     <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden lg:table-cell">{student.course ?? <span className="text-zinc-300">—</span>}</td>
-                    <td className="px-5 py-3.5 text-zinc-600 text-[13px] hidden lg:table-cell">{student.mentor.name}</td>
+                    <td className="px-5 py-3.5 hidden lg:table-cell">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-zinc-600 text-[13px]">{student.mentor.name}</span>
+                        {!student.mentor.isActive && (
+                          <span className="text-[10px] font-medium bg-orange-50 text-orange-600 border border-orange-200 px-1.5 py-0.5 rounded-full">Inactive</span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-5 py-3.5">
-                      <Badge variant={sc.variant} className="text-[11px] px-2 py-0.5">{sc.label}</Badge>
+                      {student.user.mustChangePassword ? (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                          Invitation Sent
+                        </span>
+                      ) : (
+                        <Badge variant={sc.variant} className="text-[11px] px-2 py-0.5">{sc.label}</Badge>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-zinc-400 text-[12px] hidden xl:table-cell">{formatDate(student.user.createdAt)}</td>
                     <td className="px-5 py-3.5 text-right">
                       <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <ResetPasswordButton userId={student.user.id} userName={student.name} />
                         <Button asChild size="sm" variant="outline" className="h-7 rounded-lg text-[12px] px-2.5">
                           <Link href={`/admin/students/${student.id}/edit`}>Edit</Link>
                         </Button>

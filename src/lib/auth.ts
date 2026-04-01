@@ -30,8 +30,8 @@ export const authOptions: NextAuthOptions = {
             ],
           },
           include: {
-            mentor: { select: { id: true } },
-            student: { select: { id: true } },
+            mentor: { select: { id: true, isActive: true } },
+            student: { select: { id: true, status: true } },
           },
         });
 
@@ -39,6 +39,22 @@ export const authOptions: NextAuthOptions = {
 
         const valid = await verifyPassword(password, user.passwordHash);
         if (!valid) return null;
+
+        const isActive =
+          user.role === Role.ADMIN
+            ? true
+            : user.role === Role.MENTOR
+            ? (user.mentor?.isActive ?? false)
+            : user.role === Role.STUDENT
+            ? user.student?.status === "ACTIVE"
+            : false;
+
+        // Block deactivated users at login.
+        // Exception: mustChangePassword=true (invited) users must be able to log in
+        // so they can reach the change-password page to complete onboarding.
+        if (!isActive && !user.mustChangePassword) {
+          throw new Error("AccountDeactivated");
+        }
 
         const profileId =
           user.role === Role.MENTOR
@@ -53,6 +69,7 @@ export const authOptions: NextAuthOptions = {
           email: user.email,
           role: user.role,
           mustChangePassword: user.mustChangePassword,
+          isActive,
           profileId,
         };
       },
@@ -66,8 +83,26 @@ export const authOptions: NextAuthOptions = {
         token.email = user.email;
         token.role = user.role;
         token.mustChangePassword = user.mustChangePassword;
+        token.isActive = user.isActive;
         token.profileId = user.profileId;
       }
+
+      // Re-check mustChangePassword from DB so admin password resets
+      // and re-activations take effect on the next request.
+      if (token.id && token.role !== Role.ADMIN) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { mustChangePassword: true },
+          });
+          if (dbUser) {
+            token.mustChangePassword = dbUser.mustChangePassword;
+          }
+        } catch {
+          // Fail open — don't block auth if DB is briefly unavailable
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
@@ -77,6 +112,7 @@ export const authOptions: NextAuthOptions = {
         email: token.email,
         role: token.role,
         mustChangePassword: token.mustChangePassword,
+        isActive: token.isActive ?? true,
         profileId: token.profileId,
       };
       return session;

@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import { MentorDeleteButton } from "@/components/admin/mentor-delete-button";
 import { MentorToggleButton } from "@/components/admin/mentor-toggle-button";
+import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import { formatDate } from "@/lib/utils";
 import { UserCheck } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -28,7 +29,7 @@ export default async function AdminMentorsPage({
       skip: (page - 1) * limit,
       take: limit,
       include: {
-        user: { select: { userId: true, createdAt: true } },
+        user: { select: { id: true, userId: true, createdAt: true, mustChangePassword: true } },
         _count: { select: { students: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -39,6 +40,9 @@ export default async function AdminMentorsPage({
   return (
     <div className="space-y-6">
       <PageHeader title="Mentors" description={`${total} mentor${total !== 1 ? "s" : ""} registered`}>
+        <Button asChild size="sm" variant="outline" className="rounded-lg h-8 text-[13px]">
+          <Link href="/admin/students/reassign">Reassign Students</Link>
+        </Button>
         <Button asChild size="sm" className="rounded-lg h-8 text-[13px] bg-indigo-600 hover:bg-indigo-700">
           <Link href="/admin/mentors/new">Add Mentor</Link>
         </Button>
@@ -46,7 +50,9 @@ export default async function AdminMentorsPage({
 
       {mentors.length === 0 ? (
         <EmptyState icon={UserCheck} title="No mentors yet" description="Create your first mentor to get started.">
-          <Button asChild size="sm" className="rounded-lg bg-indigo-600 hover:bg-indigo-700"><Link href="/admin/mentors/new">Add Mentor</Link></Button>
+          <Button asChild size="sm" className="rounded-lg bg-indigo-600 hover:bg-indigo-700">
+            <Link href="/admin/mentors/new">Add Mentor</Link>
+          </Button>
         </EmptyState>
       ) : (
         <div className="bg-white border border-zinc-200 rounded-xl shadow-card overflow-hidden">
@@ -80,16 +86,29 @@ export default async function AdminMentorsPage({
                   <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden md:table-cell">{mentor.email}</td>
                   <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden lg:table-cell">{mentor.specialization ?? <span className="text-zinc-300">—</span>}</td>
                   <td className="px-5 py-3.5">
-                    <span className="text-[13px] font-semibold text-zinc-700">{mentor._count.students}</span>
+                    {mentor._count.students > 0 ? (
+                      <Link href={`/admin/students/reassign?fromMentor=${mentor.id}`} className="text-[13px] font-semibold text-indigo-600 hover:underline">
+                        {mentor._count.students}
+                      </Link>
+                    ) : (
+                      <span className="text-[13px] font-semibold text-zinc-700">0</span>
+                    )}
                   </td>
                   <td className="px-5 py-3.5">
-                    <Badge variant={mentor.isActive ? "success" : "secondary"} className="text-[11px] px-2 py-0.5">
-                      {mentor.isActive ? "Active" : "Inactive"}
-                    </Badge>
+                    {mentor.user.mustChangePassword ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                        Invitation Sent
+                      </span>
+                    ) : (
+                      <Badge variant={mentor.isActive ? "success" : "secondary"} className="text-[11px] px-2 py-0.5">
+                        {mentor.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    )}
                   </td>
                   <td className="px-5 py-3.5 text-zinc-400 text-[12px] hidden xl:table-cell">{formatDate(mentor.user.createdAt)}</td>
                   <td className="px-5 py-3.5 text-right">
                     <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                      <ResetPasswordButton userId={mentor.user.id} userName={mentor.name} />
                       <MentorToggleButton mentorId={mentor.id} isActive={mentor.isActive} mentorName={mentor.name} />
                       <Button asChild size="sm" variant="outline" className="h-7 rounded-lg text-[12px] px-2.5">
                         <Link href={`/admin/mentors/${mentor.id}/edit`}>Edit</Link>

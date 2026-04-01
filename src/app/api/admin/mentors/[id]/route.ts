@@ -65,11 +65,28 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const mentor = await prisma.mentor.findUnique({ where: { id: params.id } });
+  const mentor = await prisma.mentor.findUnique({
+    where: { id: params.id },
+    include: { _count: { select: { students: true } } },
+  });
   if (!mentor) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Delete user (cascades to mentor profile)
-  await prisma.user.delete({ where: { id: mentor.userId } });
+  if (mentor._count.students > 0) {
+    return NextResponse.json(
+      { error: `Cannot delete: mentor has ${mentor._count.students} assigned student${mentor._count.students > 1 ? "s" : ""}. Reassign students first.` },
+      { status: 409 }
+    );
+  }
+
+  // Delete in order to avoid FK constraint violations, then cascade via User
+  await prisma.$transaction([
+    prisma.submission.deleteMany({ where: { assignment: { mentorId: mentor.id } } }),
+    prisma.assignment.deleteMany({ where: { mentorId: mentor.id } }),
+    prisma.message.deleteMany({ where: { mentorId: mentor.id } }),
+    prisma.warning.deleteMany({ where: { mentorId: mentor.id } }),
+    prisma.notification.deleteMany({ where: { mentorId: mentor.id } }),
+    prisma.user.delete({ where: { id: mentor.userId } }),
+  ]);
 
   return NextResponse.json({ success: true });
 }
