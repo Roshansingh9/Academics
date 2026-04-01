@@ -35,5 +35,7 @@ declare module "next-auth/jwt" {
     mustChangePassword: boolean;
     isActive: boolean;
     profileId?: string;
+    /** Unix timestamp (ms) of last DB status re-check — used to throttle re-checks */
+    checkedAt?: number;
   }
 }

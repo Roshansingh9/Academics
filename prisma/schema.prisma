@@ -46,14 +46,16 @@ enum EditRequestStatus {
 }
 
 model User {
-  id                 String   @id @default(cuid())
-  userId             String   @unique
-  email              String   @unique
+  id                 String    @id @default(cuid())
+  userId             String    @unique
+  email              String    @unique
   passwordHash       String
   role               Role
-  mustChangePassword Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  mustChangePassword Boolean   @default(true)
+  emailSentAt        DateTime?
+  activatedAt        DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   mentor  Mentor?
   student Student?
@@ -79,6 +81,7 @@ model Mentor {
   warnings      Warning[]
   messages      Message[]
   notifications Notification[]
+  statusLogs    MentorStatusLog[]
 }
 
 model Student {
@@ -103,6 +106,9 @@ model Student {
   messages            Message[]
   notifications       StudentNotification[]
   editRequests        ProfileEditRequest[]
+  statusLogs          StudentStatusLog[]
+
+  @@index([mentorId, status])
 }
 
 model Assignment {
@@ -120,6 +126,8 @@ model Assignment {
 
   students    AssignmentStudent[]
   submissions Submission[]
+
+  @@index([mentorId, isActive])
 }
 
 model AssignmentStudent {
@@ -129,6 +137,7 @@ model AssignmentStudent {
   student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
 
   @@id([assignmentId, studentId])
+  @@index([studentId])
 }
 
 model Submission {
@@ -147,6 +156,8 @@ model Submission {
   updatedAt     DateTime         @updatedAt
 
   @@unique([assignmentId, studentId])
+  @@index([studentId])
+  @@index([assignmentId, status])
 }
 
 model Warning {
@@ -159,6 +170,9 @@ model Warning {
   reason    String
   issuedAt  DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@index([mentorId])
+  @@index([studentId])
 }
 
 model Message {
@@ -174,6 +188,8 @@ model Message {
   sentAt          DateTime          @default(now())
 
   @@index([mentorId, studentId, sentAt])
+  @@index([studentId, isReadByStudent])
+  @@index([mentorId, isReadByMentor])
 }
 
 model Notification {
@@ -186,6 +202,8 @@ model Notification {
   createdAt DateTime           @default(now())
 
   recipients StudentNotification[]
+
+  @@index([mentorId])
 }
 
 model StudentNotification {
@@ -214,4 +232,27 @@ model ProfileEditRequest {
   adminNote   String?
   createdAt   DateTime          @default(now())
   reviewedAt  DateTime?
+
+  @@index([studentId])
+  @@index([status])
+}
+
+model MentorStatusLog {
+  id        String   @id @default(cuid())
+  mentorId  String
+  mentor    Mentor   @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  isActive  Boolean
+  createdAt DateTime @default(now())
+
+  @@index([mentorId])
+}
+
+model StudentStatusLog {
+  id        String        @id @default(cuid())
+  studentId String
+  student   Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  status    StudentStatus
+  createdAt DateTime      @default(now())
+
+  @@index([studentId])
 }

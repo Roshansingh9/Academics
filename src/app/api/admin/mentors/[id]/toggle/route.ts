@@ -9,37 +9,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const mentor = await prisma.mentor.findUnique({
-    where: { id: params.id },
-    include: {
-      _count: { select: { students: true } },
-      students: {
-        where: { status: "ACTIVE" },
-        select: { name: true },
-        take: 5,
-      },
-    },
-  });
+  const mentor = await prisma.mentor.findUnique({ where: { id: params.id } });
   if (!mentor) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Block deactivation if mentor still has active students — prevents orphaned students
-  if (mentor.isActive && mentor._count.students > 0) {
-    const names = mentor.students.map((s) => s.name).join(", ");
-    const overflow = mentor._count.students > 5 ? ` and ${mentor._count.students - 5} more` : "";
-    return NextResponse.json(
-      {
-        error: `Cannot deactivate: ${mentor._count.students} student${mentor._count.students !== 1 ? "s are" : " is"} still assigned to this mentor.`,
-        detail: `Reassign ${names}${overflow} before deactivating.`,
-        studentCount: mentor._count.students,
-      },
-      { status: 409 }
-    );
-  }
-
-  const updated = await prisma.mentor.update({
-    where: { id: params.id },
-    data: { isActive: !mentor.isActive },
-  });
+  // Toggle isActive and write a status-change log entry atomically.
+  // Deactivation is allowed even when students are assigned — it only removes
+  // the mentor's dashboard access. Students remain assigned and visible to admin.
+  const newIsActive = !mentor.isActive;
+  const [updated] = await prisma.$transaction([
+    prisma.mentor.update({
+      where: { id: params.id },
+      data: { isActive: newIsActive },
+    }),
+    prisma.mentorStatusLog.create({
+      data: { mentorId: params.id, isActive: newIsActive },
+    }),
+  ]);
 
   return NextResponse.json({ isActive: updated.isActive });
 }

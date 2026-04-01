@@ -4,6 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { verifyPassword } from "@/lib/password";
 import { Role } from "@prisma/client";
 
+// How often to re-check DB for isActive / mustChangePassword changes.
+// The dashboard layout.tsx does a live DB check on every page load, so
+// this only needs to protect direct API calls made by a deactivated session.
+const JWT_REFRESH_INTERVAL_MS = 30_000; // 30 seconds
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt" },
   pages: {
@@ -77,29 +82,51 @@ export const authOptions: NextAuthOptions = {
   ],
   callbacks: {
     async jwt({ token, user }) {
+      // Initial sign-in: populate token from the authorize() return value.
+      // Mark checkedAt so we don't immediately re-query on the first request.
       if (user) {
-        token.id = user.id;
-        token.userId = user.userId;
-        token.email = user.email;
-        token.role = user.role;
-        token.mustChangePassword = user.mustChangePassword;
-        token.isActive = user.isActive;
-        token.profileId = user.profileId;
+        return {
+          ...token,
+          id: user.id,
+          userId: user.userId,
+          email: user.email,
+          role: user.role,
+          mustChangePassword: user.mustChangePassword,
+          isActive: user.isActive,
+          profileId: user.profileId,
+          checkedAt: Date.now(),
+        };
       }
 
-      // Re-check mustChangePassword from DB so admin password resets
-      // and re-activations take effect on the next request.
-      if (token.id && token.role !== Role.ADMIN) {
+      // Subsequent requests: throttle DB re-checks so we don't hit the database
+      // on every API call. The layout.tsx live check covers page-navigation blocking;
+      // this covers direct API calls from a stale/deactivated session.
+      const now = Date.now();
+      const lastChecked = token.checkedAt ?? 0;
+
+      if (token.id && token.role !== Role.ADMIN && (now - lastChecked) > JWT_REFRESH_INTERVAL_MS) {
         try {
           const dbUser = await prisma.user.findUnique({
             where: { id: token.id as string },
-            select: { mustChangePassword: true },
+            select: {
+              mustChangePassword: true,
+              mentor: { select: { isActive: true } },
+              student: { select: { status: true } },
+            },
           });
           if (dbUser) {
             token.mustChangePassword = dbUser.mustChangePassword;
+            if (token.role === Role.MENTOR) {
+              token.isActive = dbUser.mentor?.isActive ?? false;
+            } else if (token.role === Role.STUDENT) {
+              token.isActive = dbUser.student?.status === "ACTIVE";
+            }
+            token.checkedAt = now;
           }
         } catch {
-          // Fail open — don't block auth if DB is briefly unavailable
+          // Fail open — don't block auth if DB is briefly unavailable.
+          // The stale token values remain; layout.tsx will catch the deactivation
+          // on the next page load.
         }
       }
 

@@ -12,31 +12,31 @@ export async function GET(req: NextRequest, { params }: { params: { studentId: s
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const mentor = await prisma.mentor.findUnique({ where: { userId: session.user.id } });
-  if (!mentor) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // Use profileId from session to avoid a redundant DB lookup by userId
+  const mentorId = session.user.profileId;
+  if (!mentorId) return NextResponse.json({ error: "Mentor profile not found" }, { status: 404 });
 
   // Verify student belongs to this mentor
   const student = await prisma.student.findFirst({
-    where: { id: params.studentId, mentorId: mentor.id },
+    where: { id: params.studentId, mentorId },
   });
   if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
 
   const { searchParams } = new URL(req.url);
-  const after = searchParams.get("after"); // cursor: last message id seen
+  const after = searchParams.get("after"); // cursor: ID of last message seen
 
+  // Use Prisma cursor pagination — avoids the nested findUnique N+1 pattern.
+  // The Message table has @@index([mentorId, studentId, sentAt]) which covers this query.
   const messages = await prisma.message.findMany({
-    where: {
-      mentorId: mentor.id,
-      studentId: params.studentId,
-      ...(after && { sentAt: { gt: (await prisma.message.findUnique({ where: { id: after } }))?.sentAt ?? new Date(0) } }),
-    },
+    where: { mentorId, studentId: params.studentId },
+    ...(after ? { cursor: { id: after }, skip: 1 } : {}),
     orderBy: { sentAt: "asc" },
     take: 100,
   });
 
-  // Mark messages from student as read
+  // Mark messages from student as read (use the compound index for efficiency)
   await prisma.message.updateMany({
-    where: { mentorId: mentor.id, studentId: params.studentId, senderType: "STUDENT", isReadByMentor: false },
+    where: { mentorId, studentId: params.studentId, senderType: "STUDENT", isReadByMentor: false },
     data: { isReadByMentor: true },
   });
 
@@ -55,24 +55,28 @@ export async function POST(req: NextRequest, { params }: { params: { studentId: 
     return NextResponse.json({ error: parse.error.flatten() }, { status: 400 });
   }
 
-  const mentor = await prisma.mentor.findUnique({ where: { userId: session.user.id } });
-  if (!mentor) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  const mentorId = session.user.profileId;
+  if (!mentorId) return NextResponse.json({ error: "Mentor profile not found" }, { status: 404 });
 
-  const student = await prisma.student.findFirst({
-    where: { id: params.studentId, mentorId: mentor.id },
-  });
+  // Fetch mentor name (needed for email) and verify student ownership in one query
+  const [mentor, student] = await Promise.all([
+    prisma.mentor.findUnique({ where: { id: mentorId }, select: { name: true } }),
+    prisma.student.findFirst({ where: { id: params.studentId, mentorId } }),
+  ]);
+
+  if (!mentor) return NextResponse.json({ error: "Mentor not found" }, { status: 404 });
   if (!student) return NextResponse.json({ error: "Student not found" }, { status: 404 });
 
   const message = await prisma.message.create({
     data: {
-      mentorId: mentor.id,
+      mentorId,
       studentId: params.studentId,
       senderType: "MENTOR",
       content: parse.data.content,
     },
   });
 
-  // Email the student (fire-and-forget)
+  // Email the student (fire-and-forget with retry)
   sendMessageEmail(
     student.email,
     student.name,
