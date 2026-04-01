@@ -1,0 +1,217 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  ADMIN
+  MENTOR
+  STUDENT
+}
+
+enum AssignmentTarget {
+  SPECIFIC
+  ALL
+}
+
+enum SubmissionStatus {
+  PENDING
+  REVIEWED
+  ACCEPTED
+}
+
+enum NotificationTarget {
+  SPECIFIC
+  ALL
+}
+
+enum MessageSenderType {
+  MENTOR
+  STUDENT
+}
+
+enum StudentStatus {
+  ACTIVE
+  PASSED_OUT
+  DROPPED_OUT
+}
+
+enum EditRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  userId             String   @unique
+  email              String   @unique
+  passwordHash       String
+  role               Role
+  mustChangePassword Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  mentor  Mentor?
+  student Student?
+}
+
+model Mentor {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  email          String   @unique
+  phone          String?
+  specialization String?
+  department     String?
+  bio            String?
+  avatarUrl      String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  students      Student[]
+  assignments   Assignment[]
+  warnings      Warning[]
+  messages      Message[]
+  notifications Notification[]
+}
+
+model Student {
+  id        String        @id @default(cuid())
+  userId    String        @unique
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  email     String        @unique
+  phone     String?
+  course    String?
+  batch     String?
+  mentorId  String
+  mentor    Mentor        @relation(fields: [mentorId], references: [id])
+  status    StudentStatus @default(ACTIVE)
+  avatarUrl String?
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  assignmentTargets   AssignmentStudent[]
+  submissions         Submission[]
+  warnings            Warning[]
+  messages            Message[]
+  notifications       StudentNotification[]
+  editRequests        ProfileEditRequest[]
+}
+
+model Assignment {
+  id             String           @id @default(cuid())
+  mentorId       String
+  mentor         Mentor           @relation(fields: [mentorId], references: [id])
+  title          String
+  description    String
+  dueDate        DateTime
+  relevantLinks  String[]         @default([])
+  target         AssignmentTarget @default(SPECIFIC)
+  isActive       Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  students    AssignmentStudent[]
+  submissions Submission[]
+}
+
+model AssignmentStudent {
+  assignmentId String
+  studentId    String
+  assignment   Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  student      Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([assignmentId, studentId])
+}
+
+model Submission {
+  id            String           @id @default(cuid())
+  assignmentId  String
+  assignment    Assignment       @relation(fields: [assignmentId], references: [id])
+  studentId     String
+  student       Student          @relation(fields: [studentId], references: [id])
+  content       String
+  fileUrl       String?
+  status          SubmissionStatus @default(PENDING)
+  mentorComment   String?
+  submissionLinks String[]         @default([])
+  submittedAt     DateTime         @default(now())
+  reviewedAt    DateTime?
+  updatedAt     DateTime         @updatedAt
+
+  @@unique([assignmentId, studentId])
+}
+
+model Warning {
+  id        String   @id @default(cuid())
+  mentorId  String
+  mentor    Mentor   @relation(fields: [mentorId], references: [id])
+  studentId String
+  student   Student  @relation(fields: [studentId], references: [id])
+  title     String
+  reason    String
+  issuedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Message {
+  id              String            @id @default(cuid())
+  mentorId        String
+  mentor          Mentor            @relation(fields: [mentorId], references: [id])
+  studentId       String
+  student         Student           @relation(fields: [studentId], references: [id])
+  senderType      MessageSenderType
+  content         String
+  isReadByStudent Boolean           @default(false)
+  isReadByMentor  Boolean           @default(false)
+  sentAt          DateTime          @default(now())
+
+  @@index([mentorId, studentId, sentAt])
+}
+
+model Notification {
+  id        String             @id @default(cuid())
+  mentorId  String
+  mentor    Mentor             @relation(fields: [mentorId], references: [id])
+  title     String
+  body      String
+  target    NotificationTarget @default(SPECIFIC)
+  createdAt DateTime           @default(now())
+
+  recipients StudentNotification[]
+}
+
+model StudentNotification {
+  id             String       @id @default(cuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  isRead         Boolean      @default(false)
+  readAt         DateTime?
+  deliveredAt    DateTime     @default(now())
+
+  @@unique([notificationId, studentId])
+  @@index([studentId, isRead])
+}
+
+model ProfileEditRequest {
+  id          String            @id @default(cuid())
+  studentId   String
+  student     Student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name        String?
+  phone       String?
+  course      String?
+  batch       String?
+  status      EditRequestStatus @default(PENDING)
+  adminNote   String?
+  createdAt   DateTime          @default(now())
+  reviewedAt  DateTime?
+}
