@@ -32,7 +32,7 @@ export function EditProfileButton({ student, hasPendingRequest }: Props) {
     setLoading(false);
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? "Failed to submit");
+      setError(typeof json.error === "string" ? json.error : "Failed to submit");
       return;
     }
     setSuccess(true);

@@ -75,7 +75,7 @@ export function AssignmentForm({ students, mode = "create", assignmentId, defaul
 
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? `Failed to ${isEdit ? "update" : "create"} assignment`);
+      setError(typeof json.error === "string" ? json.error : `Failed to ${isEdit ? "update" : "create"} assignment`);
       return;
     }
 

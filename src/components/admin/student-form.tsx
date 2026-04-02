@@ -97,7 +97,7 @@ export function StudentForm({ mode, studentId, mentors, defaultValues }: Student
       const uploadRes = await fetch("/api/upload", { method: "POST", body: fd });
       if (!uploadRes.ok) {
         const json = await uploadRes.json();
-        setError(json.error ?? "Failed to upload avatar");
+        setError(typeof json.error === "string" ? json.error : "Failed to upload avatar");
         return;
       }
       const { url } = await uploadRes.json();

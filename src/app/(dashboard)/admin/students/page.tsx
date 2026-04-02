@@ -3,8 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { StudentDeleteButton } from "@/components/admin/student-delete-button";
-import { ResetPasswordButton } from "@/components/admin/reset-password-button";
+import { StudentActionsMenu } from "@/components/admin/student-actions-menu";
 import { formatDate } from "@/lib/utils";
 import { Users } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -83,12 +82,14 @@ export default async function AdminStudentsPage({
                       <span className="font-mono text-[12px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">{student.user.userId}</span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2.5">
+                      <Link href={`/admin/students/${student.id}`} className="flex items-center gap-2.5 group/name">
                         <div className="h-7 w-7 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 text-[11px] font-bold shrink-0">
                           {student.name.slice(0, 2).toUpperCase()}
                         </div>
-                        <span className="font-medium text-zinc-800 text-[13px]">{student.name}</span>
-                      </div>
+                        <span className="font-medium text-zinc-800 text-[13px] group-hover/name:text-indigo-600 group-hover/name:underline transition-colors">
+                          {student.name}
+                        </span>
+                      </Link>
                     </td>
                     <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden md:table-cell">{student.email}</td>
                     <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden lg:table-cell">{student.course ?? <span className="text-zinc-300">—</span>}</td>
@@ -110,14 +111,12 @@ export default async function AdminStudentsPage({
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-zinc-400 text-[12px] hidden xl:table-cell">{formatDate(student.user.createdAt)}</td>
-                    <td className="px-5 py-3.5 text-right">
-                      <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <ResetPasswordButton userId={student.user.id} userName={student.name} />
-                        <Button asChild size="sm" variant="outline" className="h-7 rounded-lg text-[12px] px-2.5">
-                          <Link href={`/admin/students/${student.id}/edit`}>Edit</Link>
-                        </Button>
-                        <StudentDeleteButton studentId={student.id} studentName={student.name} />
-                      </div>
+                    <td className="px-4 py-3.5 text-right w-10">
+                      <StudentActionsMenu
+                        studentId={student.id}
+                        userId={student.user.id}
+                        studentName={student.name}
+                      />
                     </td>
                   </tr>
                 );

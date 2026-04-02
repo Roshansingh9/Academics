@@ -9,22 +9,30 @@ export default async function StudentOverviewPage() {
   const session = await getServerSession(authOptions);
   const student = await prisma.student.findUnique({ where: { userId: session!.user.id } });
 
+  if (!student) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-zinc-500 text-sm">Student profile not found. Please contact your administrator.</p>
+      </div>
+    );
+  }
+
   const [pendingAssignments, unreadMessages, warnings, unreadNotifications] = await Promise.all([
     prisma.assignment.count({
       where: {
         isActive: true,
         OR: [
-          { mentorId: student!.mentorId, target: "ALL" },
-          { students: { some: { studentId: student!.id } } },
+          { mentorId: student.mentorId, target: "ALL" },
+          { students: { some: { studentId: student.id } } },
         ],
-        submissions: { none: { studentId: student!.id } },
+        submissions: { none: { studentId: student.id } },
       },
     }),
     prisma.message.count({
-      where: { studentId: student!.id, senderType: "MENTOR", isReadByStudent: false },
+      where: { studentId: student.id, senderType: "MENTOR", isReadByStudent: false },
     }),
-    prisma.warning.count({ where: { studentId: student!.id } }),
-    prisma.studentNotification.count({ where: { studentId: student!.id, isRead: false } }),
+    prisma.warning.count({ where: { studentId: student.id } }),
+    prisma.studentNotification.count({ where: { studentId: student.id, isRead: false } }),
   ]);
 
   const stats = [

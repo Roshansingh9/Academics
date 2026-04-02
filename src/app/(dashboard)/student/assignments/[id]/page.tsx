@@ -12,19 +12,20 @@ import { isPast } from "date-fns";
 export default async function StudentAssignmentDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
   const student = await prisma.student.findUnique({ where: { userId: session!.user.id } });
+  if (!student) notFound();
 
   const assignment = await prisma.assignment.findFirst({
     where: {
       id: params.id,
       isActive: true,
       OR: [
-        { mentorId: student!.mentorId, target: "ALL" },
-        { students: { some: { studentId: student!.id } } },
+        { mentorId: student.mentorId, target: "ALL" },
+        { students: { some: { studentId: student.id } } },
       ],
     },
     include: {
       mentor: { select: { name: true } },
-      submissions: { where: { studentId: student!.id } },
+      submissions: { where: { studentId: student.id } },
     },
   });
 

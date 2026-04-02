@@ -32,7 +32,7 @@ export function SubmitAssignmentForm({ assignmentId, isResubmit = false }: { ass
       setUploading(false);
       if (!uploadRes.ok) {
         const json = await uploadRes.json();
-        setError(json.error ?? "File upload failed");
+        setError(typeof json.error === "string" ? json.error : "File upload failed");
         setSubmitting(false);
         return;
       }
@@ -48,7 +48,7 @@ export function SubmitAssignmentForm({ assignmentId, isResubmit = false }: { ass
     setSubmitting(false);
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? "Submission failed");
+      setError(typeof json.error === "string" ? json.error : "Submission failed");
       return;
     }
     router.refresh();

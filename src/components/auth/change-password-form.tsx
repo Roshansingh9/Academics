@@ -55,7 +55,7 @@ export function ChangePasswordForm({ forced = false }: ChangePasswordFormProps) 
 
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? "Failed to change password");
+      setError(typeof json.error === "string" ? json.error : "Failed to change password");
       return;
     }
 

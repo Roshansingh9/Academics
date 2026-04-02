@@ -33,7 +33,7 @@ export function WarningForm({ students }: { students: Student[] }) {
 
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? "Failed to issue warning");
+      setError(typeof json.error === "string" ? json.error : "Failed to issue warning");
       return;
     }
 

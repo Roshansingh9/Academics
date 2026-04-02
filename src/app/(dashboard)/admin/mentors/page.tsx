@@ -3,9 +3,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
-import { MentorDeleteButton } from "@/components/admin/mentor-delete-button";
-import { MentorToggleButton } from "@/components/admin/mentor-toggle-button";
-import { ResetPasswordButton } from "@/components/admin/reset-password-button";
+import { MentorActionsMenu } from "@/components/admin/mentor-actions-menu";
 import { formatDate } from "@/lib/utils";
 import { UserCheck } from "lucide-react";
 import { EmptyState } from "@/components/shared/empty-state";
@@ -76,12 +74,14 @@ export default async function AdminMentorsPage({
                     <span className="font-mono text-[12px] text-zinc-500 bg-zinc-100 px-2 py-0.5 rounded-md">{mentor.user.userId}</span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2.5">
+                    <Link href={`/admin/mentors/${mentor.id}`} className="flex items-center gap-2.5 group/name">
                       <div className="h-7 w-7 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 text-[11px] font-bold shrink-0">
                         {mentor.name.slice(0, 2).toUpperCase()}
                       </div>
-                      <span className="font-medium text-zinc-800 text-[13px]">{mentor.name}</span>
-                    </div>
+                      <span className="font-medium text-zinc-800 text-[13px] group-hover/name:text-indigo-600 group-hover/name:underline transition-colors">
+                        {mentor.name}
+                      </span>
+                    </Link>
                   </td>
                   <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden md:table-cell">{mentor.email}</td>
                   <td className="px-5 py-3.5 text-zinc-500 text-[13px] hidden lg:table-cell">{mentor.specialization ?? <span className="text-zinc-300">—</span>}</td>
@@ -106,15 +106,14 @@ export default async function AdminMentorsPage({
                     )}
                   </td>
                   <td className="px-5 py-3.5 text-zinc-400 text-[12px] hidden xl:table-cell">{formatDate(mentor.user.createdAt)}</td>
-                  <td className="px-5 py-3.5 text-right">
-                    <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                      <ResetPasswordButton userId={mentor.user.id} userName={mentor.name} />
-                      <MentorToggleButton mentorId={mentor.id} isActive={mentor.isActive} mentorName={mentor.name} />
-                      <Button asChild size="sm" variant="outline" className="h-7 rounded-lg text-[12px] px-2.5">
-                        <Link href={`/admin/mentors/${mentor.id}/edit`}>Edit</Link>
-                      </Button>
-                      <MentorDeleteButton mentorId={mentor.id} mentorName={mentor.name} />
-                    </div>
+                  <td className="px-4 py-3.5 text-right w-10">
+                    <MentorActionsMenu
+                      mentorId={mentor.id}
+                      userId={mentor.user.id}
+                      mentorName={mentor.name}
+                      isActive={mentor.isActive}
+                      studentCount={mentor._count.students}
+                    />
                   </td>
                 </tr>
               ))}

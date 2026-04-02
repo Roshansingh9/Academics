@@ -11,8 +11,16 @@ export default async function StudentProgressPage() {
   const session = await getServerSession(authOptions);
   const student = await prisma.student.findUnique({ where: { userId: session!.user.id } });
 
+  if (!student) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-zinc-500 text-sm">Student profile not found. Please contact your administrator.</p>
+      </div>
+    );
+  }
+
   const submissions = await prisma.submission.findMany({
-    where: { studentId: student!.id },
+    where: { studentId: student.id },
     include: { assignment: { select: { title: true, dueDate: true } } },
     orderBy: { submittedAt: "desc" },
   });

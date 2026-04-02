@@ -34,7 +34,7 @@ export function NotificationForm({ students }: { students: Student[] }) {
     });
     if (!res.ok) {
       const json = await res.json();
-      setError(json.error ?? "Failed to send notification");
+      setError(typeof json.error === "string" ? json.error : "Failed to send notification");
       return;
     }
     router.push("/mentor/notifications");

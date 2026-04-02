@@ -15,8 +15,8 @@ export default async function AdminOverviewPage() {
   const stats = [
     { label: "Active Mentors",    value: mentorCount,    icon: UserCheck,     href: "/admin/mentors",  accent: "bg-indigo-50 text-indigo-600 border-indigo-100" },
     { label: "Active Students",   value: studentCount,   icon: Users,         href: "/admin/students", accent: "bg-emerald-50 text-emerald-600 border-emerald-100" },
-    { label: "Total Assignments", value: assignmentCount, icon: BookOpen,     href: "#",               accent: "bg-sky-50 text-sky-600 border-sky-100" },
-    { label: "Total Warnings",    value: warningCount,   icon: AlertTriangle,  href: "#",               accent: "bg-amber-50 text-amber-600 border-amber-100" },
+    { label: "Total Assignments", value: assignmentCount, icon: BookOpen,      href: "/admin/assignments", accent: "bg-sky-50 text-sky-600 border-sky-100" },
+    { label: "Total Warnings",    value: warningCount,   icon: AlertTriangle,  href: "/admin/warnings",   accent: "bg-amber-50 text-amber-600 border-amber-100" },
   ];
 
   return (

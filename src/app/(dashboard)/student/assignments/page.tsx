@@ -14,16 +14,24 @@ export default async function StudentAssignmentsPage() {
   const session = await getServerSession(authOptions);
   const student = await prisma.student.findUnique({ where: { userId: session!.user.id } });
 
+  if (!student) {
+    return (
+      <div className="flex items-center justify-center min-h-[40vh]">
+        <p className="text-zinc-500 text-sm">Student profile not found. Please contact your administrator.</p>
+      </div>
+    );
+  }
+
   const assignments = await prisma.assignment.findMany({
     where: {
       isActive: true,
       OR: [
-        { mentorId: student!.mentorId, target: "ALL" },
-        { students: { some: { studentId: student!.id } } },
+        { mentorId: student.mentorId, target: "ALL" },
+        { students: { some: { studentId: student.id } } },
       ],
     },
     include: {
-      submissions: { where: { studentId: student!.id }, select: { id: true, status: true, mentorComment: true } },
+      submissions: { where: { studentId: student.id }, select: { id: true, status: true, mentorComment: true } },
       mentor: { select: { name: true } },
     },
     orderBy: { dueDate: "asc" },
